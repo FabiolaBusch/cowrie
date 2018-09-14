@@ -506,9 +506,16 @@ listen_endpoints = tcp:2223:interface=0.0.0.0
 #
 [output_jsonlog]
 enabled = true
-logfile = ${honeypot:log_path}/cowrie.json
-#timestamp_format = epoch_msec
-timestamp_format = iso
+logfile = var/log/cowrie/cowrie.json
+# Enable ISO timestamps (milliseconds) in the JSON output log file
+# Field name is 'timestamp' and the time is written is ISO 8601 format
+iso_time = true
+# Enable Unix epoch timestamps (nanoseconds) in the JSON output log file
+# Field name is 'time' and the timestamp is a floating point number with 6 digits (repesenting nanoseconds)
+unix_nsec_time = false
+# Enable Unix epoch timestamps (milliseconds) in the JSON output log file
+# Field name is 'time_msec' and the timestamp is a 64 bit integer with the last significant digits representing the milliseconds
+unix_msec_time = false
 
 
 # Supports logging to Elasticsearch

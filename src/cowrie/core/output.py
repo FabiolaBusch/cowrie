@@ -163,6 +163,8 @@ class Output(object):
         # Add ISO timestamp and sensor data
         if 'time' not in ev:
             ev['time'] = time.time()
+        if 'time_msec' not in ev:
+            ev['time_msec'] = ev['time'] * 1000000 / 1000
         ev['timestamp'] = datetime.datetime.utcfromtimestamp(ev['time']).isoformat() + 'Z'
 
         if 'format' in ev and ('message' not in ev or ev['message'] == ()):

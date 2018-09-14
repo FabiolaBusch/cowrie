@@ -30,24 +30,30 @@ from __future__ import absolute_import, division
 
 import json
 import os
-
-from twisted.python import log
+import sys
 
 import cowrie.core.output
 import cowrie.python.logfile
 from cowrie.core.config import CONFIG
+from twisted.python import log
 
 
 class Output(cowrie.core.output.Output):
 
+    time_fields_to_remove = {'time', 'time_msec', 'timestamp'}
+    config_mapping = {'unix_nsec_time': 'time', 'unix_msec_time': 'time_msec', 'iso_time': 'timestamp'}
+
     def __init__(self):
         cowrie.core.output.Output.__init__(self)
         fn = CONFIG.get('output_jsonlog', 'logfile')
-        if CONFIG.has_option('output_jsonlog', 'timestamp_format'):
-            self.timestamp_format = CONFIG.get('output_jsonlog', 'timestamp_format')
-        else:
-            self.timestamp_format = 'iso'
-        log.msg("Timestamp format is '{}'".format(self.timestamp_format))
+        time_output = False
+        for config_option in self.config_mapping.keys():
+            if CONFIG.has_option('output_jsonlog', config_option) and CONFIG.getboolean('output_jsonlog', config_option):
+                time_output = True
+                self.time_fields_to_remove.remove(self.config_mapping[config_option])
+        if not time_output:
+            print("ERROR: You must enable at least one time output format in the cowrie.cfg under the 'output_jsonlog' section. Possible options are: {}", str(self.config_mapping.keys())[1:-1])
+            sys.exit(1)
         dirs = os.path.dirname(fn)
         base = os.path.basename(fn)
         self.outfile = cowrie.python.logfile.CowrieDailyLogFile(base, dirs, defaultMode=0o664)
@@ -59,13 +65,13 @@ class Output(cowrie.core.output.Output):
         self.outfile.flush()
 
     def write(self, logentry):
-        if self.timestamp_format == 'epoch':
-            logentry['timestamp'] = logentry['time']
-        elif self.timestamp_format == 'epoch_msec':
-            logentry['timestamp'] = int(logentry['time'] * 1000000 / 1000)
+        if 'time' not in self.time_fields_to_remove:
+            logentry['time'] = logentry['time']
+        if 'time_msec' not in self.time_fields_to_remove:
+            logentry['time_msec'] = int(logentry['time'] * 1000000 / 1000)
         for i in list(logentry.keys()):
             # Remove twisted 15 legacy keys
-            if i.startswith('log_') or i == 'time' or i == 'system':
+            if i.startswith('log_') or i in self.time_fields_to_remove or i == 'system':
                 del logentry[i]
         json.dump(logentry, self.outfile)
         self.outfile.write('\n')
